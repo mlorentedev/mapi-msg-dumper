@@ -1,0 +1,17 @@
+{
+  "folders": [
+    "Shared Inbox\\Product-A",
+    "Shared Inbox\\Product-B",
+    "Inbox\\Project-X"
+  ],
+  "cadence": "monthly",
+  "manual": true,
+  "start_date": "2025-01-01",
+  "end_date": "2025-01-31",
+  "output_root": "./exports",
+  "checkpoint_file": "./exports/checkpoints/history.json",
+  "markdown_root": "./exports/markdown",
+  "max_windows": 1,
+  "dry_run": true,
+  "verbose": true
+}

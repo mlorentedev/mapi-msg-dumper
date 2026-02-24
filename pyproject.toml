@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "mapi-msg-dumper"
+version = "0.1.0"
+description = "Local Outlook MSG extraction engine using COM interop."
+authors = ["mlorente <info@mlorente.dev>"]
+license = "MIT"
+keywords = ["outlook", "mapi", "msg", "automation", "email-export"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Email",
+]
+readme = "README.md"
+packages = [{ include = "mapi_msg_dumper", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+typer = "^0.16.0"
+rich = "^13.9.4"
+pywin32 = { version = "^308", markers = "platform_system == 'Windows'" }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+ruff = "^0.9.9"
+mypy = "^1.15.0"
+
+[tool.poetry.scripts]
+mapi-msg-dumper = "mapi_msg_dumper.main:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+no_implicit_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["win32com.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = ["--verbose", "--cov=mapi_msg_dumper", "--cov-report=term-missing"]

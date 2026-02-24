@@ -1,0 +1,29 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Test and coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Runtime outputs
+exports/
+run.json
+
+# IDE and OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
