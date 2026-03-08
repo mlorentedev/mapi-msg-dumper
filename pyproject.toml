@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mapi-msg-dumper"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local Outlook MSG extraction engine using COM interop."
 authors = ["mlorente <info@mlorente.dev>"]
 license = "MIT"
