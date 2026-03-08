@@ -21,6 +21,6 @@ class ThunderbirdExtractor(BaseExtractor):
         # TODO: Implement local .mbox parsing
         return []
 
-    def save_raw(self, email: ExtractedEmail, output_dir: Any) -> Any:
+    def save_raw(self, email: ExtractedEmail, output_dir: Path) -> Path:
         # TODO: Implement writing .eml
-        pass
+        return Path("not-implemented")

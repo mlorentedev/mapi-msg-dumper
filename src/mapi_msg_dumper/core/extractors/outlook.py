@@ -20,7 +20,7 @@ class OutlookExtractor(BaseExtractor):
         self.namespace: Any = None
 
     def connect(self) -> None:
-        import win32com.client  # type: ignore[import-untyped]
+        import win32com.client
 
         self.namespace = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
 

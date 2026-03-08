@@ -22,6 +22,6 @@ class BaseExtractor(ABC):
         pass
 
     @abstractmethod
-    def save_raw(self, email: ExtractedEmail, output_dir: Any) -> Any:
+    def save_raw(self, email: ExtractedEmail, output_dir: Path) -> Path:
         """Save the raw format (.msg, .eml) to the output directory. Returns the path to the saved file."""
         pass
