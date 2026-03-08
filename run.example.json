@@ -1,17 +1,33 @@
 {
+  "provider": {
+    "type": "outlook",
+    "config": {}
+  },
+  "extraction": {
+    "start_date": "2025-01-01",
+    "end_date": "2025-01-31",
+    "cadence": "monthly",
+    "manual": true,
+    "max_windows": 1,
+    "dry_run": true
+  },
+  "outputs": {
+    "raw_root": "./exports/raw",
+    "markdown_root": "./exports/markdown",
+    "save_raw": true
+  },
   "folders": [
-    "Shared Inbox\\Product-A",
-    "Shared Inbox\\Product-B",
-    "Inbox\\Project-X"
+    {
+      "path": "Inbox",
+      "tags": ["personal"]
+    },
+    {
+      "path": "Shared Inbox\\Support",
+      "tags": ["work", "support"],
+      "children": [
+        "Archives/2024"
+      ]
+    }
   ],
-  "cadence": "monthly",
-  "manual": true,
-  "start_date": "2025-01-01",
-  "end_date": "2025-01-31",
-  "output_root": "./exports",
-  "checkpoint_file": "./exports/checkpoints/history.json",
-  "markdown_root": "./exports/markdown",
-  "max_windows": 1,
-  "dry_run": true,
   "verbose": true
 }
