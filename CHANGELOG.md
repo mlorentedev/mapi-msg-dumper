@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/mlorentedev/mapi-msg-dumper/compare/v0.2.0...v0.2.1) (2026-03-08)
+
+
+### Documentation
+
+* update README and example config with new schema ([#4](https://github.com/mlorentedev/mapi-msg-dumper/issues/4)) ([599816c](https://github.com/mlorentedev/mapi-msg-dumper/commit/599816c9d6ae498f1a52fac5545f8c4e1a8ffa54))
+
 ## [0.2.0](https://github.com/mlorentedev/mapi-msg-dumper/compare/mapi-msg-dumper-v0.1.0...mapi-msg-dumper-v0.2.0) (2026-03-08)
 
 
