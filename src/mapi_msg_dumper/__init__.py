@@ -5,4 +5,4 @@ __all__ = ["__version__"]
 try:
     __version__ = version("mapi-msg-dumper")
 except PackageNotFoundError:
-    __version__ = "0.0.0"
+    __version__ = "0.2.0"
