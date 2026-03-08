@@ -1,111 +1,79 @@
 # mapi-msg-dumper
 
-Local Outlook extraction engine using COM (`pywin32`) to export historical emails as `.msg` and optional AI-friendly Markdown.
+Local email extraction engine (Outlook/Thunderbird) designed for batch processing historical data and converting it into AI-friendly Markdown.
 
 ## Why
 
-When Microsoft Graph is blocked by tenant policy, this tool works directly against the authenticated Outlook desktop session.
+When Microsoft Graph is blocked by tenant policy or you need to process local archives (Thunderbird MBOX) without configuring IMAP/OAuth, this tool works directly against the local data stores.
+
+## Features
+
+- **Strategy Pattern Extractors**: Native support for Outlook (via MAPI/COM) and Thunderbird (local profiles).
+- **Batch Resiliency**: Time-window planning (monthly/biweekly) and checkpointing to resume long extractions.
+- **AI-Optimized**: Generates clean Markdown with YAML frontmatter and folder-based tagging.
+- **Offline-First**: No credentials required; if your local client can read it, this tool can extract it.
 
 ## Install
 
-```powershell
+```bash
 poetry install
 ```
 
-## Single-command operation
+## Operation
 
-Use one config file only (`run.json`), then always run:
+The tool is driven by a `run.json` configuration file:
 
-```powershell
+```bash
 poetry run mapi-msg-dumper --run-config .\run.json
 ```
 
-`run.json` is local-only and ignored by git (`.gitignore`).
-You can bootstrap it from the sanitized template:
-
-```powershell
-Copy-Item .\run.example.json .\run.json
-```
-
-## Recommended workflow
-
-1. **Edit only `run.json`** (folders + date range + output settings).
-2. Set `"dry_run": true` for a safe validation pass.
-3. Run the command above.
-4. If folder validation looks good, set `"dry_run": false` and run again.
-5. Move to next month by changing only `start_date` and `end_date`.
-
-## `run.example.json` reference
+### `run.json` reference
 
 ```json
 {
+  "provider": {
+    "type": "outlook",
+    "config": {}
+  },
+  "extraction": {
+    "start_date": "2025-01-01",
+    "end_date": "2025-01-31",
+    "cadence": "monthly",
+    "manual": true,
+    "max_windows": 1,
+    "dry_run": false
+  },
+  "outputs": {
+    "raw_root": "./exports/raw",
+    "markdown_root": "./exports/markdown",
+    "save_raw": true
+  },
   "folders": [
-    "Shared Inbox\\Product-A",
-    "Shared Inbox\\Product-B",
-    "Inbox\\Project-X"
+    {
+      "path": "Inbox\\Project-X",
+      "tags": ["project-x", "internal"]
+    },
+    "Shared Inbox\\Product-A"
   ],
-  "cadence": "monthly",
-  "manual": true,
-  "start_date": "2025-01-01",
-  "end_date": "2025-01-31",
-  "output_root": "./exports",
-  "checkpoint_file": "./exports/checkpoints/history.json",
-  "markdown_root": "./exports/markdown",
-  "max_windows": 1,
-  "dry_run": false,
   "verbose": true
 }
 ```
 
-### Supported keys
+### Configuration Sections
 
-- `folder` or `folders`
-- `output_root`
-- `cadence` (`monthly` or `biweekly`)
-- `start_date`, `end_date` (`YYYY-MM-DD`)
-- `manual`
-- `checkpoint_file`
-- `max_windows`
-- `markdown_root`
-- `dry_run`
-- `verbose`
+- **`provider`**: 
+    - `type`: `"outlook"` or `"thunderbird"`.
+    - `config`: Provider-specific settings (e.g., `profile_path` for Thunderbird).
+- **`extraction`**: Controls the date range and batching logic.
+- **`outputs`**:
+    - `raw_root`: Where to save original `.msg` or `.eml` files.
+    - `markdown_root`: Where to save the generated `.md` files.
+    - `save_raw`: Set to `false` if you only need Markdown.
+- **`folders`**: List of folder paths to process. Supports flat strings or objects with `tags` and `children` for tree-based configuration.
 
-Notes:
-- `folders` supports flat paths and tree nodes (`path` + optional `children`).
-- Folder roots may be `Inbox\...` or other top-level mailbox folders (for example `Shared Inbox\Product-A`).
-- UTF-8 BOM JSON is supported (PowerShell `Set-Content` compatible).
-
-## Output layout (single export root)
-
-All runtime artifacts can live under one root (`exports`):
-
-```text
-exports/
-├── YYYY/MM/*.msg
-├── markdown/YYYY/MM/*.md
-├── logs/success.csv
-├── logs/errors.csv
-└── checkpoints/*.json
-```
-
-## Quick checks after each run
-
-```powershell
-Import-Csv .\exports\logs\success.csv | Select-Object -Last 10
-Import-Csv .\exports\logs\errors.csv | Select-Object -Last 10
-Get-ChildItem .\exports -Recurse -Filter *.msg | Select-Object -First 10 FullName
-```
-
-## Common issues
-
-- `Folder failed ... segment ... not found`: the folder path does not exist in Outlook exactly as written.
-- `Dry run = true` with no files: expected behavior (simulation mode).
-- Missing old emails: Outlook may still be syncing cached history; wait for sync completion.
-
-## Release strategy (GitHub)
+## Release Strategy
 
 This project uses:
-- Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`)
-- CI workflow (`.github/workflows/ci.yml`) for `ruff`, `mypy`, and `pytest`
-- `release-please` (`release-please-config.json` + `.release-please-manifest.json`) for semantic versioning and changelog PRs
-- Release workflow (`.github/workflows/release.yml`) to build Python distributions and attach them to GitHub Releases
+- **Conventional Commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
+- **Release-Please**: Automated versioning (vX.X.X) and changelog generation.
+- **CI/CD**: `ruff`, `mypy`, and `pytest` validation on every PR.
