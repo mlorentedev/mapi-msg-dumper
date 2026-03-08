@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from pathlib import Path
 
 from mapi_msg_dumper.core.folders_config import FolderNode
 from mapi_msg_dumper.core.markdown import ExtractedEmail

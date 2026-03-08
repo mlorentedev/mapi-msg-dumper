@@ -15,7 +15,7 @@ def test_render_email_markdown_contains_metadata_and_body() -> None:
         entry_id="abc123",
         folder_path="Inbox",
         body_text="First line\r\nSecond line",
-        tags=["support", "auth"]
+        tags=["support", "auth"],
     )
     content = render_email_markdown(email, source_raw_path=Path(r"C:/exports/2026/02/mail.msg"))
 

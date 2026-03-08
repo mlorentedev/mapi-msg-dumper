@@ -56,7 +56,7 @@ def load_run_config(config_path: Path) -> FileRunConfig:
         raise ValueError("run config 'provider.config' must be an object.")
 
     # 2. Extraction
-    ext_node = payload.get("extraction", payload) # fallback to root for backwards compat during transition
+    ext_node = payload.get("extraction", payload)  # fallback to root for backwards compat during transition
     if not isinstance(ext_node, dict):
         raise ValueError("run config 'extraction' must be an object.")
 

@@ -38,10 +38,7 @@ def test_load_run_config_with_folders_and_all_options(tmp_path: Path) -> None:
     config.write_text(
         json.dumps(
             {
-                "provider": {
-                    "type": "thunderbird",
-                    "config": {"profile_path": "/some/path"}
-                },
+                "provider": {"type": "thunderbird", "config": {"profile_path": "/some/path"}},
                 "folders": [{"path": r"Inbox\Finance", "tags": ["finance"]}, r"Inbox\HR"],
                 "extraction": {
                     "cadence": "biweekly",
@@ -49,13 +46,13 @@ def test_load_run_config_with_folders_and_all_options(tmp_path: Path) -> None:
                     "start_date": "2020-01-01",
                     "end_date": "2020-01-31",
                     "max_windows": 2,
-                    "dry_run": True
+                    "dry_run": True,
                 },
                 "outputs": {
                     "raw_root": "./exports/raw",
                     "checkpoint_file": "./exports/checkpoints/folder.json",
                     "markdown_root": "./exports/markdown",
-                    "save_raw": False
+                    "save_raw": False,
                 },
                 "verbose": True,
             }
@@ -68,10 +65,7 @@ def test_load_run_config_with_folders_and_all_options(tmp_path: Path) -> None:
     assert parsed.provider.type == "thunderbird"
     assert parsed.provider.config == {"profile_path": "/some/path"}
 
-    assert parsed.folders == [
-        FolderNode(r"Inbox\Finance", ["finance"]),
-        FolderNode(r"Inbox\HR", [])
-    ]
+    assert parsed.folders == [FolderNode(r"Inbox\Finance", ["finance"]), FolderNode(r"Inbox\HR", [])]
 
     assert parsed.outputs.raw_root == tmp_path / "exports" / "raw"
     assert parsed.outputs.checkpoint_file == tmp_path / "exports" / "checkpoints" / "folder.json"
