@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from mapi_msg_dumper.core.extractors.base import BaseExtractor
 from mapi_msg_dumper.core.folders_config import FolderNode
