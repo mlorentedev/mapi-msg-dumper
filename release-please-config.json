@@ -5,7 +5,8 @@
       "release-type": "python",
       "package-name": "mapi-msg-dumper",
       "changelog-path": "CHANGELOG.md",
-      "versioning": "default"
+      "versioning": "default",
+      "include-component-in-tag": false
     }
   }
 }
