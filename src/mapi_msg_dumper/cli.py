@@ -8,12 +8,26 @@ from rich.console import Console
 from rich.table import Table
 
 from mapi_msg_dumper.core.extractor import ExtractionSummary, run_extraction
-from mapi_msg_dumper.core.folders_config import checkpoint_name_for_folder, normalize_folder_path
+from mapi_msg_dumper.core.extractors.base import BaseExtractor
+from mapi_msg_dumper.core.extractors.outlook import OutlookExtractor
+from mapi_msg_dumper.core.extractors.thunderbird import ThunderbirdExtractor
+from mapi_msg_dumper.core.folders_config import FolderNode, checkpoint_name_for_folder, normalize_folder_path
 from mapi_msg_dumper.core.planning import normalize_cadence, parse_iso_date
 from mapi_msg_dumper.core.run_config import load_run_config
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 console = Console()
+
+
+def _create_extractor(provider_type: str, provider_config: dict) -> BaseExtractor:
+    if provider_type == "outlook":
+        return OutlookExtractor()
+    if provider_type == "thunderbird":
+        profile = provider_config.get("profile_path")
+        if not profile:
+            raise ValueError("Thunderbird provider requires 'profile_path' in config.")
+        return ThunderbirdExtractor(profile_path=profile)
+    raise ValueError(f"Unknown provider type: {provider_type}")
 
 
 @app.command()
@@ -24,7 +38,7 @@ def extract(
     run_config: Path | None = typer.Option(
         None, help="JSON run config. If set, values from this file drive execution."
     ),
-    output_root: Path = typer.Option(Path("exports"), help="Root path for MSG output."),
+    output_root: Path = typer.Option(Path("exports"), help="Root path for raw output (MSG/EML)."),
     cadence: str = typer.Option("monthly", help="Auto batching cadence: monthly or biweekly."),
     start_date: str | None = typer.Option(None, help="Start date in YYYY-MM-DD."),
     end_date: str | None = typer.Option(None, help="End date in YYYY-MM-DD."),
@@ -32,7 +46,7 @@ def extract(
         False, "--manual", help="Single-window mode. If not set, auto mode uses checkpoint resume."
     ),
     checkpoint_file: Path | None = typer.Option(
-        None, help="Checkpoint file path. Defaults to <output-root>\\checkpoint.json."
+        None, help="Checkpoint file path. Defaults to <raw-root>\\checkpoints\\<folder>.json."
     ),
     max_windows: int | None = typer.Option(
         None, min=1, help="Process at most N date windows per run (safe batching control)."
@@ -40,53 +54,62 @@ def extract(
     markdown_root: Path | None = typer.Option(
         None, help="Optional root path to also write AI-friendly Markdown files."
     ),
-    dry_run: bool = typer.Option(False, help="Evaluate and log without writing MSG files."),
+    dry_run: bool = typer.Option(False, help="Evaluate and log without writing files."),
     verbose: bool = typer.Option(False, "--verbose", help="Print detailed extraction progress."),
 ) -> None:
     try:
         if run_config is not None:
             config = load_run_config(run_config.resolve())
-            parsed_start = _parse_optional_date(config.start_date)
-            parsed_end = _parse_optional_date(config.end_date)
-            normalized_cadence = normalize_cadence(config.cadence)
-            folder_paths = config.folder_paths
-            output_root = config.output_root
-            manual = config.manual
-            checkpoint_file = config.checkpoint_file
-            max_windows = config.max_windows
-            markdown_root = config.markdown_root
-            dry_run = config.dry_run
+            parsed_start = _parse_optional_date(config.extraction.start_date)
+            parsed_end = _parse_optional_date(config.extraction.end_date)
+            normalized_cadence = normalize_cadence(config.extraction.cadence)
+            folder_nodes = config.folders
+
+            raw_root = config.outputs.raw_root or output_root
+            manual = config.extraction.manual
+            checkpoint_file = config.outputs.checkpoint_file
+            max_windows = config.extraction.max_windows
+            markdown_root = config.outputs.markdown_root
+            dry_run = config.extraction.dry_run
+            save_raw = config.outputs.save_raw
             verbose = config.verbose
+            extractor = _create_extractor(config.provider.type, config.provider.config)
         else:
             parsed_start = _parse_optional_date(start_date)
             parsed_end = _parse_optional_date(end_date)
             normalized_cadence = normalize_cadence(cadence)
-            folder_paths = [normalize_folder_path(folder)]
+            folder_nodes = [FolderNode(path=normalize_folder_path(folder), tags=[])]
+            raw_root = output_root
+            save_raw = True
+            extractor = OutlookExtractor()
 
         folder_failures: list[tuple[str, str]] = []
         summary = ExtractionSummary()
-        multi_folder = len(folder_paths) > 1
+        multi_folder = len(folder_nodes) > 1
 
-        for target_folder in folder_paths:
+        for target_node in folder_nodes:
+            target_folder = target_node.path
             if verbose and multi_folder:
                 console.print(f"[cyan]Processing folder:[/cyan] {target_folder}")
 
             effective_checkpoint = _resolve_checkpoint_for_folder(
                 checkpoint_file=checkpoint_file,
-                output_root=output_root,
+                output_root=raw_root,
                 folder_path=target_folder,
                 multi_folder=multi_folder,
             )
             try:
                 folder_summary = run_extraction(
-                    folder_path=target_folder,
-                    output_root=output_root,
+                    extractor=extractor,
+                    folder_node=target_node,
+                    output_root=raw_root,
                     cadence=normalized_cadence,
                     start_date=parsed_start,
                     end_date=parsed_end,
                     manual=manual,
                     checkpoint_path=effective_checkpoint,
                     dry_run=dry_run,
+                    save_raw=save_raw,
                     markdown_root=markdown_root,
                     verbose=verbose,
                     max_windows=max_windows,
@@ -102,9 +125,9 @@ def extract(
 
     _print_summary(
         summary=summary,
-        output_root=output_root.resolve(),
+        output_root=raw_root.resolve(),
         dry_run=dry_run,
-        folders_requested=len(folder_paths),
+        folders_requested=len(folder_nodes),
         folders_failed=len(folder_failures),
     )
     if folder_failures:
@@ -120,7 +143,7 @@ def _parse_optional_date(value: str | None) -> date | None:
 def _resolve_checkpoint_for_folder(
     checkpoint_file: Path | None, output_root: Path, folder_path: str, multi_folder: bool
 ) -> Path | None:
-    if not multi_folder:
+    if not multi_folder and checkpoint_file is not None:
         return checkpoint_file
 
     token = checkpoint_name_for_folder(folder_path)
@@ -149,6 +172,6 @@ def _print_summary(
     table.add_row("Dry run", str(dry_run).lower())
 
     console.print(table)
-    console.print(f"Output root: {output_root}")
+    console.print(f"Raw Output root: {output_root}")
     console.print(f"Success log: {output_root / 'logs' / 'success.csv'}")
     console.print(f"Error log:   {output_root / 'logs' / 'errors.csv'}")

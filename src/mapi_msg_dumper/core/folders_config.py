@@ -2,26 +2,33 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 _SAFE_TOKEN_CHARS = re.compile(r"[^a-z0-9]+")
 
 
-def load_folder_paths(config_path: Path) -> list[str]:
+@dataclass(frozen=True)
+class FolderNode:
+    path: str
+    tags: list[str]
+
+
+def load_folder_nodes(config_path: Path) -> list[FolderNode]:
     data = json.loads(config_path.read_text(encoding="utf-8-sig"))
 
     if isinstance(data, dict):
-        folders_node = data.get("folders")
+        folders_node = data.get("folders", [])
     else:
         folders_node = data
 
     if not isinstance(folders_node, list):
         raise ValueError("Folder config JSON must be an array or an object with a 'folders' array.")
 
-    resolved: list[str] = []
+    resolved: list[FolderNode] = []
     for node in folders_node:
-        resolved.extend(_expand_node(node=node, parent=None))
+        resolved.extend(_expand_node(node=node, parent=None, parent_tags=[]))
 
     if not resolved:
         raise ValueError("Folder config does not define any folder.")
@@ -43,12 +50,12 @@ def normalize_folder_path(folder_path: str) -> str:
     return "\\".join(parts)
 
 
-def _expand_node(node: Any, parent: str | None) -> list[str]:
+def _expand_node(node: Any, parent: str | None, parent_tags: list[str]) -> list[FolderNode]:
     if isinstance(node, str):
-        return [_join_path(parent=parent, child_path=node)]
+        return [FolderNode(path=_join_path(parent=parent, child_path=node), tags=list(parent_tags))]
 
     if not isinstance(node, dict):
-        raise ValueError("Folder node must be a string path or an object with 'path' and optional 'children'.")
+        raise ValueError("Folder node must be a string path or an object with 'path' and optional 'children'/'tags'.")
 
     path_node = node.get("path")
     if not isinstance(path_node, str):
@@ -58,14 +65,22 @@ def _expand_node(node: Any, parent: str | None) -> list[str]:
     if not isinstance(include_current, bool):
         raise ValueError("Folder node 'include' must be true or false.")
 
+    current_tags = list(parent_tags)
+    node_tags = node.get("tags", [])
+    if not isinstance(node_tags, list):
+        raise ValueError("Folder node 'tags' must be a list of strings.")
+    for t in node_tags:
+        if str(t) not in current_tags:
+            current_tags.append(str(t))
+
     current = _join_path(parent=parent, child_path=path_node)
     children = node.get("children", [])
     if not isinstance(children, list):
         raise ValueError("Folder node 'children' must be an array.")
 
-    resolved = [current] if include_current else []
+    resolved = [FolderNode(path=current, tags=current_tags)] if include_current else []
     for child in children:
-        resolved.extend(_expand_node(node=child, parent=current))
+        resolved.extend(_expand_node(node=child, parent=current, parent_tags=current_tags))
     return resolved
 
 
@@ -86,13 +101,13 @@ def _is_absolute_child_path(parent: str, child: str) -> bool:
     return parent_root == child_root
 
 
-def _dedupe_keep_order(values: list[str]) -> list[str]:
+def _dedupe_keep_order(nodes: list[FolderNode]) -> list[FolderNode]:
     seen: set[str] = set()
-    ordered: list[str] = []
-    for value in values:
-        key = normalize_folder_path(value).lower()
+    ordered: list[FolderNode] = []
+    for node in nodes:
+        key = normalize_folder_path(node.path).lower()
         if key in seen:
             continue
         seen.add(key)
-        ordered.append(normalize_folder_path(value))
+        ordered.append(FolderNode(path=normalize_folder_path(node.path), tags=node.tags))
     return ordered
